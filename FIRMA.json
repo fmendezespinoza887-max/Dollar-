@@ -1,0 +1,48 @@
+// === SISTEMA DE HASH Y FIRMA DIGITAL ===
+class FGME_SealSystem {
+    constructor() {
+        this.immutableZones = new Map();
+        this.signatureChain = [];
+    }
+
+    async createSeal(content) {
+        // Hash SHA-512 con sal única
+        const timestamp = Date.now();
+        const salt = crypto.getRandomValues(new Uint8Array(32));
+        const encoder = new TextEncoder();
+        const data = encoder.encode(content + timestamp + salt);
+        
+        const hashBuffer = await crypto.subtle.digest('SHA-512', data);
+        const hashArray = Array.from(new Uint8Array(hashBuffer));
+        const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+        
+        return {
+            hash: hashHex,
+            timestamp,
+            salt: Array.from(salt).map(b => b.toString(16)).join(''),
+            algorithm: 'SHA-512-WORM'
+        };
+    }
+
+    verifyZone(zoneId, currentContent) {
+        const originalSeal = this.immutableZones.get(zoneId);
+        if (!originalSeal) return { valid: false, reason: 'ZONE_NOT_FOUND' };
+        
+        // Recalcular hash con misma sal
+        const encoder = new TextEncoder();
+        const data = encoder.encode(currentContent + originalSeal.timestamp + 
+                                  new Uint8Array(originalSeal.salt.match(/.{1,2}/g).map(byte => parseInt(byte, 16))));
+        
+        return crypto.subtle.digest('SHA-512', data).then(hashBuffer => {
+            const hashArray = Array.from(new Uint8Array(hashBuffer));
+            const currentHash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+            
+            return {
+                valid: currentHash === originalSeal.hash,
+                originalHash: originalSeal.hash,
+                currentHash,
+                timestamp: originalSeal.timestamp
+            };
+        });
+    }
+}
