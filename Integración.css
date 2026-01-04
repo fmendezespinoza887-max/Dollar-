@@ -1,0 +1,187 @@
+<!-- Agregar al final del body, antes del script existente -->
+<script>
+// Inicializar sistemas de protección
+(function() {
+    'use strict';
+    
+    // === CONFIGURACIÓN GLOBAL INMUTABLE ===
+    const FGME_CONFIG = Object.freeze({
+        VERSION: '2.0.0',
+        MODE: 'PRODUCTION',
+        AI_CORE: 'DEEPSEEK_LOGIC_V2',
+        SECURITY_LEVEL: 'MAXIMUM',
+        SELF_DESTRUCT_ON_TAMPER: false
+    });
+
+    // === BLOQUEO DE HERRAMIENTAS DE DESARROLLO ===
+    (function protectDevTools() {
+        const devToolsPatterns = [
+            /devtools/gi,
+            /firebug/gi,
+            /webpack/gi,
+            /eval/gi,
+            /function.*\(.*\).*\{.*\}/gi
+        ];
+        
+        Object.defineProperty(window, 'eval', {
+            value: function() {
+                throw new Error('eval() está deshabilitado por FGME Security');
+            },
+            writable: false,
+            configurable: false
+        });
+        
+        // Detectar apertura de DevTools
+        setInterval(() => {
+            const threshold = 160;
+            const widthThreshold = window.outerWidth - window.innerWidth > threshold;
+            const heightThreshold = window.outerHeight - window.innerHeight > threshold;
+            
+            if (widthThreshold || heightThreshold) {
+                WORM.append({
+                    type: 'DEVTOOLS_DETECTED',
+                    action: 'LOG_ONLY',
+                    timestamp: Date.now()
+                });
+            }
+        }, 1000);
+    })();
+
+    // === SISTEMA DE BLOQUEO DE EXTENSIONES ===
+    (function blockExtensions() {
+        const originalQuery = CSSStyleSheet.prototype.insertRule;
+        CSSStyleSheet.prototype.insertRule = function(rule, index) {
+            if (rule.includes('--injected') || rule.includes('!important')) {
+                WORM.append({
+                    type: 'EXTENSION_INJECTION_BLOCKED',
+                    data: rule.substring(0, 100),
+                    action: 'BLOCKED'
+                });
+                return -1;
+            }
+            return originalQuery.call(this, rule, index);
+        };
+    })();
+
+    // === INICIALIZACIÓN DE SISTEMAS ===
+    document.addEventListener('DOMContentLoaded', async () => {
+        // 1. Sistema de sellado
+        const sealSystem = new FGME_SealSystem();
+        
+        // 2. Monitor de integridad
+        const integrityMonitor = new IntegrityMonitor();
+        
+        // 3. Sistema de consenso
+        const consensus = new FGME_ConsensusContract();
+        
+        // 4. Auto-curación
+        const healer = new SelfHealingSystem();
+        
+        // 5. Auditoría
+        const auditor = new ForensicAuditor();
+        
+        // Registrar inicio del sistema
+        await WORM.append({
+            type: 'FGME_SYSTEM_START',
+            config: FGME_CONFIG,
+            components: [
+                'SEAL_SYSTEM_ACTIVE',
+                'INTEGRITY_MONITOR_ACTIVE',
+                'CONSENSUS_ENGAGED',
+                'SELF_HEALING_ACTIVE',
+                'FORENSIC_AUDITOR_RUNNING'
+            ],
+            timestamp: Date.now()
+        });
+
+        // === POLÍTICA DE SEGURIDAD DINÁMICA ===
+        const securityPolicy = {
+            enforce: function() {
+                // Deshabilitar clic derecho
+                document.addEventListener('contextmenu', (e) => {
+                    e.preventDefault();
+                    WORM.append({
+                        type: 'RIGHT_CLICK_BLOCKED',
+                        position: { x: e.clientX, y: e.clientY }
+                    });
+                });
+
+                // Bloquear selección en zonas críticas
+                const criticalElements = document.querySelectorAll('.card, .log, header');
+                criticalElements.forEach(el => {
+                    el.style.userSelect = 'none';
+                    el.style.webkitUserSelect = 'none';
+                });
+
+                // Protección contra copia
+                document.addEventListener('copy', (e) => {
+                    const selection = window.getSelection();
+                    if (selection.toString().length > 100) {
+                        e.preventDefault();
+                        WORM.append({
+                            type: 'COPY_ATTEMPT_BLOCKED',
+                            dataLength: selection.toString().length
+                        });
+                    }
+                });
+            }
+        };
+
+        securityPolicy.enforce();
+    });
+
+    // === DETECTOR DE ANOMALÍAS ===
+    class AnomalyDetector {
+        constructor() {
+            this.patterns = {
+                INJECTION: /(<script|javascript:|on\w+=)/gi,
+                DATA_THEFT: /(localStorage|sessionStorage|cookie)/gi,
+                DEBUGGING: /(debugger|console\.|breakpoint)/gi
+            };
+            this.anomalyCount = 0;
+        }
+
+        analyze(event) {
+            const eventStr = JSON.stringify(event).toLowerCase();
+            
+            Object.entries(this.patterns).forEach(([type, pattern]) => {
+                if (pattern.test(eventStr)) {
+                    this.anomalyCount++;
+                    WORM.append({
+                        type: 'ANOMALY_DETECTED',
+                        anomalyType: type,
+                        event: event.type,
+                        count: this.anomalyCount,
+                        severity: this.calculateSeverity(type)
+                    });
+                    
+                    if (this.anomalyCount > 10) {
+                        this.triggerLockdown();
+                    }
+                }
+            });
+        }
+
+        calculateSeverity(type) {
+            const severities = {
+                INJECTION: 'CRITICAL',
+                DATA_THEFT: 'HIGH',
+                DEBUGGING: 'MEDIUM'
+            };
+            return severities[type] || 'LOW';
+        }
+
+        triggerLockdown() {
+            // Modo lockdown: deshabilitar interacción
+            document.body.style.pointerEvents = 'none';
+            document.body.style.opacity = '0.7';
+            
+            WORM.append({
+                type: 'LOCKDOWN_ACTIVATED',
+                reason: 'EXCESSIVE_ANOMALIES',
+                action: 'SYSTEM_FROZEN'
+            });
+        }
+    }
+})();
+</script>
